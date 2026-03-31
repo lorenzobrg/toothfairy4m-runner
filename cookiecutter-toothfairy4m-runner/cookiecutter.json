@@ -1,0 +1,11 @@
+{
+  "algorithm_name": "My ToothFairy4M Algorithm",
+  "algorithm_slug": "{{ cookiecutter.algorithm_name | lower | replace(' ', '_') | replace('-', '_') }}",
+  "algorithm_description": "ToothFairy4M runner algorithm",
+
+  "author_name": "",
+  "author_email": "",
+  "output_key": "result_json",
+  "output_filename": "result.json",
+  "output_content_type": "application/json"
+}
