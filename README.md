@@ -1,8 +1,11 @@
 # ToothFairy4M Runner Cookiecutter
 
-This repository is a **Cookiecutter template** for implementing ToothFairy4M “runner” algorithm containers.
+This repository is a **Cookiecutter template** for implementing ToothFairy4M algorithm packages that include both:
 
-A ToothFairy4M runner container:
+- an algorithm container entrypoint (`entrypoint.py`)
+- an external Celery runner (`runner/`) that executes jobs outside the ToothFairy4M web app
+
+A ToothFairy4M algorithm container:
 
 - Receives `TF_INPUT_MANIFEST` and `TF_OUTPUT_MANIFEST` as environment variables.
 - Reads the input manifest JSON (which includes `job` and `inputs`).
@@ -41,13 +44,34 @@ cookiecutter cookiecutter-toothfairy4m-runner
 
 Cookiecutter will create a new folder named after `algorithm_slug`.
 
-## Build the algorithm image
+## Build the generated image
 
 ```bash
 docker build -t toothfairy4m-<algorithm_slug>:latest <algorithm_slug>
 ```
 
-## Run the algorithm container locally (contract example)
+Then set `ALGORITHM_IMAGE_MAP` in the generated runner `.env` to point each modality to the image tag you built.
+
+## Run external runner (production-like)
+
+After generating a project:
+
+```bash
+cp .env.example .env
+docker run --rm \
+  --env-file .env \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  toothfairy4m-<algorithm_slug>:latest \
+  python -m celery -A runner.celery_app worker -l info -Q <runner_queue> --concurrency=1 --prefetch-multiplier=1 -O fair
+```
+
+This worker will:
+
+- consume Celery tasks (`toothfairy4m_runner.process_job`)
+- claim/complete/fail jobs through web API token auth
+- download RAW artifacts and upload processed artifacts in MinIO
+
+## Run only the algorithm contract locally
 
 Create a working directory like:
 
@@ -74,4 +98,4 @@ After it completes, check `work/output/` for the produced files and `manifest.js
 ## Frontend note
 
 Cookiecutter is typically used at **development time** to scaffold a new algorithm.
-Running the algorithm container (Docker) is usually done by a backend worker/orchestrator (e.g. your Celery runner), not directly by the browser frontend.
+Running the algorithm container is done by the generated external runner, not by the browser frontend.

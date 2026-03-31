@@ -1,7 +1,10 @@
 {
   "algorithm_name": "My ToothFairy4M Algorithm",
   "algorithm_slug": "{{ cookiecutter.algorithm_name | lower | replace(' ', '_') | replace('-', '_') }}",
+  "modality_slug": "ios",
   "algorithm_description": "ToothFairy4M runner algorithm",
+  "runner_task_name": "toothfairy4m_runner.process_job",
+  "runner_queue": "runner_ios",
 
   "author_name": "",
   "author_email": "",

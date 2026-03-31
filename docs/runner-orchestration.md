@@ -2,14 +2,14 @@
 
 ## Key distinction: scaffolding vs execution
 
-- **Cookiecutter** is used at *development time* to generate a new algorithm folder (Dockerfile + entrypoint).
+- **Cookiecutter** is used at *development time* to generate a new package (Dockerfile + entrypoint + external runner code).
 - **Docker** is used at *runtime* to execute an already-built algorithm image against an input manifest.
 
 A browser frontend generally cannot (and should not) run Cookiecutter or control Docker directly.
 Typically:
 
 - Frontend: selects algorithm + uploads inputs + shows job status/results.
-- Backend worker (runner/orchestrator): starts the Docker container with correct mounts/env, waits, then reads the output manifest.
+- External runner worker (runner/orchestrator): claims jobs via API, starts Docker algorithm container, uploads outputs, marks job complete/failed.
 
 ## Runtime contract
 
@@ -72,7 +72,7 @@ docker run --rm \
 
 - Read `/workspaces/jobs/<job_id>/output/manifest.json`
 - Upload/store the listed output files
-- Mark the job as completed/failed
+- Mark the job as completed/failed via ToothFairy4M Runner API with bearer token
 
 ## Where Cookiecutter fits
 
@@ -81,6 +81,7 @@ When a developer creates a new algorithm:
 - Run Cookiecutter to scaffold the algorithm folder.
 - Implement algorithm-specific logic in `entrypoint.py`.
 - Build and push the Docker image to a registry.
-- Configure ToothFairy4M to map an algorithm name/type to that image (e.g. an `ALGORITHM_IMAGE_MAP` style config).
+- Configure generated external runner `ALGORITHM_IMAGE_MAP` to map modality to that image.
+- Configure web `RUNNER_API_TOKENS` and runner `RUNNER_API_TOKEN`.
 
 In this repo, the Cookiecutter template lives under `cookiecutter-toothfairy4m-runner/`.
