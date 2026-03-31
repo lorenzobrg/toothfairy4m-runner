@@ -61,6 +61,23 @@ This starts a Celery worker with:
 - concurrency `1`
 - prefetch multiplier `1`
 
+## Run with Docker Compose
+
+```bash
+cp .env.compose.example .env
+docker compose up --build -d
+```
+
+Useful commands:
+
+```bash
+docker compose logs -f runner
+docker compose down
+```
+
+Compose runs one `runner` service that listens on `RUNNER_QUEUE` and uses the host Docker socket to start algorithm containers.
+If your ToothFairy4M stack is on the same Docker network (instead of host ports), you can start from `.env.example` and adjust hostnames accordingly.
+
 ## Test algorithm logic locally (without Celery)
 
 Prepare a folder like:

@@ -1,0 +1,17 @@
+services:
+  runner:
+    build:
+      context: .
+    image: ${RUNNER_IMAGE:-toothfairy4m-{{ cookiecutter.algorithm_slug }}:latest}
+    container_name: ${RUNNER_CONTAINER_NAME:-toothfairy4m-{{ cookiecutter.algorithm_slug }}-runner}
+    env_file:
+      - .env
+    command: python -m celery -A runner.celery_app worker -l info -Q ${RUNNER_QUEUE:-{{ cookiecutter.runner_queue }}} --concurrency=${RUNNER_CONCURRENCY:-1} --prefetch-multiplier=${RUNNER_PREFETCH_MULTIPLIER:-1} -O fair
+    restart: unless-stopped
+    networks:
+      - proxy-net 
+
+networks:
+  proxy-net:
+    external: true
+
