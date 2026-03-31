@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import shlex
 import shutil
 import subprocess
 import tempfile
@@ -103,6 +104,15 @@ def _run_docker(*, image: str, workdir: str, env: Dict[str, str]) -> str:
         create_cmd.extend(["-e", f"{k}={v}"])
     create_cmd.append(image)
 
+    cmd_raw = (
+        os.getenv("ALGORITHM_CONTAINER_CMD") or "python /app/entrypoint.py"
+    ).strip()
+    if cmd_raw:
+        try:
+            create_cmd.extend(shlex.split(cmd_raw))
+        except ValueError as exc:
+            raise RunnerError(f"Invalid ALGORITHM_CONTAINER_CMD: {exc}") from exc
+
     create_proc = subprocess.run(create_cmd, capture_output=True, text=True)
     if create_proc.returncode != 0:
         combined = (create_proc.stdout or "") + "\n" + (create_proc.stderr or "")
@@ -151,7 +161,10 @@ def run_job(
     *, cfg: RunnerConfig, storage: ObjectStorage, claimed_job: Dict[str, Any]
 ) -> RunnerResult:
     modality = str(claimed_job.get("modality_slug") or "").strip()
-    job_id = int(claimed_job.get("id"))
+    job_id_raw = claimed_job.get("id")
+    if job_id_raw is None:
+        raise RunnerError("Claimed job payload missing id")
+    job_id = int(str(job_id_raw))
     project_slug = str(claimed_job.get("project_slug") or "default")
     input_file_path = str(claimed_job.get("input_file_path") or "")
     output_files_meta = (

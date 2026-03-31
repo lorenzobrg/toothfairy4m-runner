@@ -35,6 +35,7 @@ Copy `.env.example` to `.env` and set values:
 - `CELERY_BROKER_URL`, `CELERY_RESULT_BACKEND`: broker/backend used by both web and worker
 - `OBJECT_STORAGE_*`: MinIO endpoint and credentials used by runner for artifact I/O
 - `ALGORITHM_IMAGE_MAP`: JSON map modality -> docker image
+- `ALGORITHM_CONTAINER_CMD` (optional): command executed inside algorithm container (default: `python /app/entrypoint.py`)
 - `RUNNER_WORKDIR_ROOT`: local staging path for downloaded inputs/output manifests
 
 ## Build
