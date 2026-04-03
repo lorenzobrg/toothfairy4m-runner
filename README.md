@@ -69,7 +69,7 @@ This worker will:
 
 - consume Celery tasks (`toothfairy4m_runner.process_job`)
 - claim/complete/fail jobs through web API token auth
-- download RAW artifacts and upload processed artifacts in MinIO
+- download RAW artifacts and upload processed artifacts in S3-compatible object storage (Garage/MinIO)
 
 ## Run only the algorithm contract locally
 

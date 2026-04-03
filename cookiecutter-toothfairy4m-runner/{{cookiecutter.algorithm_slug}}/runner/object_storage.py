@@ -1,10 +1,11 @@
 import os
 from dataclasses import dataclass
-from typing import Generator, Optional
+from typing import Dict, Generator, Optional
 from urllib.parse import urlparse
 
-from minio import Minio
-from minio.error import S3Error
+import boto3
+from botocore.config import Config
+from botocore.exceptions import ClientError
 
 from .config import RunnerConfig
 
@@ -29,16 +30,27 @@ class ObjectStorage:
         parsed = urlparse(cfg.object_storage_endpoint_url)
         if not parsed.scheme or not parsed.netloc:
             raise ObjectStorageError(
-                "OBJECT_STORAGE_ENDPOINT_URL must include scheme and host, e.g. http://minio:9000"
+                "OBJECT_STORAGE_ENDPOINT_URL must include scheme and host, e.g. http://garage:3900"
             )
 
         secure = parsed.scheme == "https" or bool(cfg.object_storage_use_ssl)
-        self._client = Minio(
-            parsed.netloc,
-            access_key=cfg.object_storage_access_key_id,
-            secret_key=cfg.object_storage_secret_access_key,
-            secure=secure,
+        verify = bool(cfg.object_storage_verify_ssl) if secure else False
+        self._client = boto3.client(
+            "s3",
+            endpoint_url=cfg.object_storage_endpoint_url,
+            aws_access_key_id=cfg.object_storage_access_key_id,
+            aws_secret_access_key=cfg.object_storage_secret_access_key,
+            region_name=cfg.object_storage_region or None,
+            use_ssl=secure,
+            verify=verify,
+            config=Config(
+                s3={"addressing_style": cfg.object_storage_addressing_style or "path"},
+                retries={"max_attempts": 3, "mode": "standard"},
+            ),
         )
+
+    def _client_error_code(self, exc: ClientError) -> str:
+        return str((exc.response or {}).get("Error", {}).get("Code", ""))
 
     def normalize_key(self, key: str) -> str:
         key = (key or "").lstrip("/")
@@ -56,11 +68,22 @@ class ObjectStorage:
 
     def ensure_bucket_exists(self) -> None:
         try:
-            if self._client.bucket_exists(self.bucket):
-                return
-            self._client.make_bucket(self.bucket)
-        except S3Error as exc:
-            if exc.code not in {"BucketAlreadyOwnedByYou", "BucketAlreadyExists"}:
+            self._client.head_bucket(Bucket=self.bucket)
+            return
+        except ClientError as exc:
+            code = self._client_error_code(exc)
+            if code not in {"404", "NoSuchBucket", "NotFound"}:
+                raise ObjectStorageError(str(exc)) from exc
+
+        try:
+            kwargs: Dict[str, object] = {"Bucket": self.bucket}
+            region = getattr(self._client.meta, "region_name", None)
+            if region and region not in {"us-east-1"}:
+                kwargs["CreateBucketConfiguration"] = {"LocationConstraint": region}
+            self._client.create_bucket(**kwargs)
+        except ClientError as exc:
+            code = self._client_error_code(exc)
+            if code not in {"BucketAlreadyOwnedByYou", "BucketAlreadyExists"}:
                 raise ObjectStorageError(str(exc)) from exc
 
     def exists(self, key: str) -> bool:
@@ -73,35 +96,40 @@ class ObjectStorage:
     def head(self, key: str) -> ObjectInfo:
         key_n = self.normalize_key(key)
         try:
-            stat = self._client.stat_object(self.bucket, key_n)
-        except S3Error as exc:
-            if exc.code in {"NoSuchKey", "NotFound"}:
+            resp = self._client.head_object(Bucket=self.bucket, Key=key_n)
+        except ClientError as exc:
+            code = self._client_error_code(exc)
+            if code in {"NoSuchKey", "NotFound", "404"}:
                 raise FileNotFoundError(key) from exc
             raise ObjectStorageError(str(exc)) from exc
+
+        etag = resp.get("ETag")
+        if isinstance(etag, str):
+            etag = etag.strip('"')
         return ObjectInfo(
             key=key,
-            content_length=getattr(stat, "size", None),
-            content_type=getattr(stat, "content_type", None),
-            etag=getattr(stat, "etag", None),
+            content_length=resp.get("ContentLength"),
+            content_type=resp.get("ContentType"),
+            etag=etag,
         )
 
     def list_keys(self, prefix: str) -> Generator[str, None, None]:
         prefix_n = self.normalize_key(prefix)
-        for obj in self._client.list_objects(
-            self.bucket, prefix=prefix_n, recursive=True
-        ):
-            key_n = getattr(obj, "object_name", None)
-            if not key_n:
-                continue
-            yield self.denormalize_key(key_n)
+        paginator = self._client.get_paginator("list_objects_v2")
+        for page in paginator.paginate(Bucket=self.bucket, Prefix=prefix_n):
+            for obj in page.get("Contents", []) or []:
+                key_n = obj.get("Key")
+                if not key_n:
+                    continue
+                yield self.denormalize_key(key_n)
 
     def download_file(self, key: str, dest_path: str) -> None:
         self.ensure_bucket_exists()
         key_n = self.normalize_key(key)
         os.makedirs(os.path.dirname(dest_path), exist_ok=True)
         try:
-            self._client.fget_object(self.bucket, key_n, dest_path)
-        except S3Error as exc:
+            self._client.download_file(self.bucket, key_n, dest_path)
+        except ClientError as exc:
             raise ObjectStorageError(str(exc)) from exc
 
     def upload_file(
@@ -110,9 +138,12 @@ class ObjectStorage:
         self.ensure_bucket_exists()
         key_n = self.normalize_key(key)
         try:
-            self._client.fput_object(
-                self.bucket, key_n, local_path, content_type=content_type
+            extra: Dict[str, str] = {}
+            if content_type:
+                extra["ContentType"] = content_type
+            self._client.upload_file(
+                local_path, self.bucket, key_n, ExtraArgs=extra or None
             )
-        except S3Error as exc:
+        except ClientError as exc:
             raise ObjectStorageError(str(exc)) from exc
         return self.head(key)

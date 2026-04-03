@@ -2,5 +2,5 @@
 # Example:
 # numpy==2.3.2
 celery[redis]==5.6.0
-minio==7.2.16
+boto3==1.39.9
 requests==2.32.3

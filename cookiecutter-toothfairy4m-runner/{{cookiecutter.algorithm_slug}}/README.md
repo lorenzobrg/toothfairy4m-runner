@@ -20,7 +20,7 @@ The algorithm container must:
 - Write all output files under `/work/output/`
 - Write the output manifest JSON to `TF_OUTPUT_MANIFEST`
 
-The algorithm container does **not** need to download/upload MinIO artifacts directly.
+The algorithm container does **not** need to download/upload object storage artifacts directly.
 The external runner handles object storage before and after execution.
 
 ## External runner environment variables
@@ -33,7 +33,7 @@ Copy `.env.example` to `.env` and set values:
 - `RUNNER_API_BASE_URL`: ToothFairy4M API base URL (for claim/complete/fail callbacks)
 - `RUNNER_API_TOKEN`: bearer token that must exist in ToothFairy4M `RUNNER_API_TOKENS`
 - `CELERY_BROKER_URL`, `CELERY_RESULT_BACKEND`: broker/backend used by both web and worker
-- `OBJECT_STORAGE_*`: MinIO endpoint and credentials used by runner for artifact I/O
+- `OBJECT_STORAGE_*`: S3-compatible endpoint and credentials used by runner for artifact I/O (Garage/MinIO)
 - `ALGORITHM_IMAGE_MAP`: JSON map modality -> docker image
 - `ALGORITHM_CONTAINER_CMD` (optional): command executed inside algorithm container (default: `python /app/entrypoint.py`)
 - `RUNNER_WORKDIR_ROOT`: local staging path for downloaded inputs/output manifests

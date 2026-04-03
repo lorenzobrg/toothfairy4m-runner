@@ -41,10 +41,13 @@ class RunnerConfig:
     celery_broker_url: str
     celery_result_backend: str
     object_storage_endpoint_url: str
+    object_storage_region: str
     object_storage_access_key_id: str
     object_storage_secret_access_key: str
     object_storage_bucket: str
     object_storage_use_ssl: bool
+    object_storage_verify_ssl: bool
+    object_storage_addressing_style: str
     object_storage_key_prefix: str
     algorithm_image_map: Dict[str, str]
     runner_workdir_root: str
@@ -65,12 +68,17 @@ def load_config() -> RunnerConfig:
         "CELERY_RESULT_BACKEND", "redis://redis:6379/1"
     ).strip()
     object_storage_endpoint_url = os.getenv("OBJECT_STORAGE_ENDPOINT_URL", "").strip()
+    object_storage_region = os.getenv("OBJECT_STORAGE_REGION", "").strip()
     object_storage_access_key_id = os.getenv("OBJECT_STORAGE_ACCESS_KEY_ID", "").strip()
     object_storage_secret_access_key = os.getenv(
         "OBJECT_STORAGE_SECRET_ACCESS_KEY", ""
     ).strip()
     object_storage_bucket = os.getenv("OBJECT_STORAGE_BUCKET", "toothfairy4m").strip()
     object_storage_use_ssl = _bool_env("OBJECT_STORAGE_USE_SSL", default=False)
+    object_storage_verify_ssl = _bool_env("OBJECT_STORAGE_VERIFY_SSL", default=True)
+    object_storage_addressing_style = (
+        os.getenv("OBJECT_STORAGE_ADDRESSING_STYLE", "path").strip() or "path"
+    )
     object_storage_key_prefix = (
         os.getenv("OBJECT_STORAGE_KEY_PREFIX", "").strip().strip("/")
     )
@@ -110,10 +118,13 @@ def load_config() -> RunnerConfig:
         celery_broker_url=celery_broker_url,
         celery_result_backend=celery_result_backend,
         object_storage_endpoint_url=object_storage_endpoint_url,
+        object_storage_region=object_storage_region,
         object_storage_access_key_id=object_storage_access_key_id,
         object_storage_secret_access_key=object_storage_secret_access_key,
         object_storage_bucket=object_storage_bucket,
         object_storage_use_ssl=object_storage_use_ssl,
+        object_storage_verify_ssl=object_storage_verify_ssl,
+        object_storage_addressing_style=object_storage_addressing_style,
         object_storage_key_prefix=object_storage_key_prefix,
         algorithm_image_map=algorithm_image_map,
         runner_workdir_root=runner_workdir_root,
