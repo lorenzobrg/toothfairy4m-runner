@@ -1,16 +1,46 @@
 # ToothFairy4M Runner Cookiecutter
 
-This repository is a **Cookiecutter template** for implementing ToothFairy4M algorithm packages that include both:
+This repo is a Cookiecutter template for ToothFairy4M **algorithm containers**.
 
-- an algorithm container entrypoint (`entrypoint.py`)
-- an external Celery runner (`runner/`) that executes jobs outside the ToothFairy4M web app
+If you only care about implementing an algorithm, focus on the container contract and implement `entrypoint.py`.
 
-A ToothFairy4M algorithm container:
+## Implement the algorithm (`entrypoint.py`)
 
-- Receives `TF_INPUT_MANIFEST` and `TF_OUTPUT_MANIFEST` as environment variables.
-- Reads the input manifest JSON (which includes `job` and `inputs`).
-- Writes all generated files into the directory that contains the output manifest.
-- Writes an output manifest JSON describing its outputs:
+At runtime, the external runner/orchestrator starts your container and sets two env vars:
+
+- `TF_INPUT_MANIFEST=/work/input/manifest.json`
+- `TF_OUTPUT_MANIFEST=/work/output/manifest.json`
+
+Your container must:
+
+1) Read the JSON at `TF_INPUT_MANIFEST`
+2) Write output file(s) under the directory containing `TF_OUTPUT_MANIFEST` (usually `/work/output/`)
+3) Write an output manifest JSON to `TF_OUTPUT_MANIFEST`
+
+### Input manifest (minimal shape)
+
+The only field algorithms should *rely on* is `inputs`.
+Extra fields may exist (e.g. `job`, `source_keys`) and can usually be ignored.
+
+Example:
+
+```json
+{
+  "version": 1,
+  "inputs": {
+    "primary": "/work/input/some_file.ext",
+    "secondary": "/work/input/other_file.ext"
+  },
+  "job": {"id": 123}
+}
+```
+
+Multiple input files are supported: `inputs` is a mapping of logical name → file path.
+The convention is to include a `primary` key when there is a main input.
+
+### Output manifest
+
+Your container must write an output manifest like:
 
 ```json
 {
@@ -21,17 +51,35 @@ A ToothFairy4M algorithm container:
 }
 ```
 
-The input manifest is expected to be shaped roughly like:
+Notes:
 
-```json
-{
-  "version": 1,
-  "job": {"id": "..."},
-  "inputs": {
-    "some_logical_name": "/work/input/some_file.ext"
-  }
-}
+- Output `path` must be either absolute or relative to `/work/output/`.
+- `content_type` is optional. If omitted, the runner still uploads the file, but won’t set S3 `ContentType` metadata.
+- The runner also accepts the short form: `"some_output_key": "relative_filename.ext"`.
+
+## Quick local test (just the contract)
+
+Create a working directory like:
+
+```text
+work/
+  input/
+    manifest.json
+    <any input files>
+  output/
 ```
+
+Run the container:
+
+```bash
+docker run --rm \
+  -v "$PWD/work:/work" \
+  -e TF_INPUT_MANIFEST=/work/input/manifest.json \
+  -e TF_OUTPUT_MANIFEST=/work/output/manifest.json \
+  toothfairy4m-<algorithm_slug>:latest
+```
+
+After it completes, check `work/output/` for the produced file(s) and `manifest.json`.
 
 ## Generate a new algorithm
 
@@ -52,50 +100,4 @@ docker build -t toothfairy4m-<algorithm_slug>:latest <algorithm_slug>
 
 Then set `ALGORITHM_IMAGE_MAP` in the generated runner `.env` to point each modality to the image tag you built.
 
-## Run external runner (production-like)
-
-After generating a project:
-
-```bash
-cp .env.example .env
-docker run --rm \
-  --env-file .env \
-  -v /var/run/docker.sock:/var/run/docker.sock \
-  toothfairy4m-<algorithm_slug>:latest \
-  python -m celery -A runner.celery_app worker -l info -Q <runner_queue> --concurrency=1 --prefetch-multiplier=1 -O fair
-```
-
-This worker will:
-
-- consume Celery tasks (`toothfairy4m_runner.process_job`)
-- claim/complete/fail jobs through web API token auth
-- download RAW artifacts and upload processed artifacts in S3-compatible object storage (Garage/MinIO)
-
-## Run only the algorithm contract locally
-
-Create a working directory like:
-
-```text
-work/
-  input/
-    manifest.json
-    <any input files>
-  output/
-```
-
-Then run:
-
-```bash
-docker run --rm \
-  -v "$PWD/work:/work" \
-  -e TF_INPUT_MANIFEST=/work/input/manifest.json \
-  -e TF_OUTPUT_MANIFEST=/work/output/manifest.json \
-  toothfairy4m-<algorithm_slug>:latest
-```
-
-After it completes, check `work/output/` for the produced files and `manifest.json`.
-
-## Frontend note
-
-Cookiecutter is typically used at **development time** to scaffold a new algorithm.
-Running the algorithm container is done by the generated external runner, not by the browser frontend.
+If you need the external runner/orchestrator details, see `docs/runner-orchestration.md`.

@@ -31,6 +31,9 @@ The container must:
     "some_key": {"path": "file.ext", "content_type": "..."}
   }
 }
+
+`content_type` is optional; if you omit it, the runner will still upload the file but won’t set
+object storage `ContentType` metadata.
 ```
 
 The input manifest is typically shaped like:

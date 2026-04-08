@@ -20,6 +20,38 @@ The algorithm container must:
 - Write all output files under `/work/output/`
 - Write the output manifest JSON to `TF_OUTPUT_MANIFEST`
 
+### Input manifest (keep it simple)
+
+The runner will provide an input manifest JSON. In practice it may contain extra metadata
+(like `job`, `modality`, `source_keys`, etc), but most algorithms should only rely on the
+`inputs` mapping.
+
+Minimum shape to support:
+
+```json
+{
+  "version": 1,
+  "inputs": {
+    "primary": "/work/input/some_input.ext"
+  }
+}
+```
+
+The default `entrypoint.py` template intentionally ignores extra fields and only uses `inputs`.
+It also includes an *optional* NIfTI example that reorients to canonical (RAS+) orientation if
+`nibabel` is installed; otherwise it falls back to copying the input.
+
+### Output `content_type` (optional)
+
+In the output manifest, each output can be either:
+
+- a string path: `"some_key": "file.ext"`, or
+- an object: `"some_key": {"path": "file.ext", "content_type": "..."}`
+
+`content_type` is **optional**. If you omit it, the external runner will still upload the file,
+but it won't set the S3 `ContentType` metadata. Providing it is useful when outputs are served
+directly to browsers or other tools that rely on MIME type.
+
 The algorithm container does **not** need to download/upload object storage artifacts directly.
 The external runner handles object storage before and after execution.
 
