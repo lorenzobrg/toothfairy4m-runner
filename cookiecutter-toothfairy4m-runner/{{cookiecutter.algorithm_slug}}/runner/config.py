@@ -55,7 +55,7 @@ class RunnerConfig:
 
 def load_config() -> RunnerConfig:
     runner_task_name = os.getenv(
-        "RUNNER_TASK_NAME", "{{ cookiecutter.runner_task_name }}"
+        "RUNNER_TASK_NAME", "toothfairy4m_runner.process_job"
     ).strip()
     runner_queue = os.getenv("RUNNER_QUEUE", "{{ cookiecutter.runner_queue }}").strip()
     runner_worker_id = os.getenv(

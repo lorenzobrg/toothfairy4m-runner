@@ -59,7 +59,7 @@ The external runner handles object storage before and after execution.
 
 Copy `.env.example` to `.env` and set values:
 
-- `RUNNER_TASK_NAME`: Celery task name consumed by this worker
+- `RUNNER_TASK_NAME`: Celery task name consumed by this worker (normally keep `toothfairy4m_runner.process_job`)
 - `RUNNER_QUEUE`: Celery queue this worker subscribes to
 - `RUNNER_WORKER_ID`: worker identifier persisted on jobs
 - `RUNNER_API_BASE_URL`: ToothFairy4M API base URL (for claim/complete/fail callbacks)

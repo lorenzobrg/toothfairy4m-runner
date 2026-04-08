@@ -16,7 +16,7 @@ storage = ObjectStorage(cfg)
 os.makedirs(cfg.runner_workdir_root, exist_ok=True)
 
 
-@app.task(name="{{ cookiecutter.runner_task_name }}", bind=True, acks_late=True)
+@app.task(name=cfg.runner_task_name, bind=True, acks_late=True)
 def process_job(self, job_id: int):
     logger.info("Received job %s", job_id)
 
