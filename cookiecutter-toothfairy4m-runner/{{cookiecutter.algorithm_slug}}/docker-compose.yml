@@ -12,8 +12,11 @@ services:
     restart: unless-stopped
     networks:
       - proxy-net 
+      - app-net
 
 networks:
   proxy-net:
     external: true
-
+  app-net:
+    name: app-net-dev-lborghi
+    external: true
