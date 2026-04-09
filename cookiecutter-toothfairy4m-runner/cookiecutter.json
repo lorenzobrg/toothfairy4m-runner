@@ -3,9 +3,5 @@
   "algorithm_slug": "{{ cookiecutter.algorithm_name | lower | replace(' ', '_') | replace('-', '_') }}",
   "modality_slug": "cbct",
   "algorithm_description": "ToothFairy4M runner algorithm",
-  "runner_queue": "runner_cbct",
-
-  "output_key": "cbct_volume",
-  "output_filename": "cbct_volume.nii.gz",
-  "output_content_type": "application/gzip"
+  "runner_queue": "runner_cbct"
 }

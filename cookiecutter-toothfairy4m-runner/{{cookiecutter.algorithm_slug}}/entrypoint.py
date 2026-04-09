@@ -38,7 +38,7 @@ import mimetypes
 import os
 import shutil
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 
 def _require_env(name: str) -> str:
@@ -60,104 +60,35 @@ def _write_output_manifest(output_manifest_path: str, outputs: Dict[str, Any]) -
     )
 
 
-def _named_inputs_from_manifest(manifest: Dict[str, Any]) -> Dict[str, str]:
-    inputs = manifest.get("inputs")
-    if isinstance(inputs, dict):
-        out: Dict[str, str] = {}
-        for k, v in inputs.items():
-            if isinstance(k, str) and isinstance(v, str) and v.strip():
-                out[k] = v
-        return out
-    return {}
-
-
-def _input_paths_from_manifest(manifest: Dict[str, Any]) -> List[str]:
-    """Return input file paths, in a robust / forgiving way.
-
-    ToothFairy4M runner usually provides:
-      manifest["inputs"] as a dict: logical_name -> absolute path in /work/input
-
-    For local experiments, we also accept:
-      - {"inputs": ["/work/input/a", "/work/input/b"]}
-      - {"input": "/work/input/a"}
-    """
-
-    inputs = manifest.get("inputs")
-    paths: List[str] = []
-
-    if isinstance(inputs, dict):
-        # Prefer the conventional `primary` key when present.
-        primary = inputs.get("primary")
-        if isinstance(primary, str) and primary.strip():
-            paths.append(primary)
-
-        # Deterministic order: then other keys sorted.
-        for k in sorted(inputs.keys(), key=lambda x: str(x)):
-            if k == "primary":
-                continue
-            v = inputs.get(k)
-            if isinstance(v, str) and v.strip() and v not in paths:
-                paths.append(v)
-
-    elif isinstance(inputs, list):
-        for v in inputs:
-            if isinstance(v, str) and v.strip():
-                paths.append(v)
-
-    else:
-        single = manifest.get("input")
-        if isinstance(single, str) and single.strip():
-            paths.append(single)
-
-    return paths
-
-
-def _is_nifti(path: str) -> bool:
-    p = (path or "").lower()
-    return p.endswith(".nii") or p.endswith(".nii.gz")
-
-
-def _guess_content_type(path: str) -> str:
+def _guess_content_type(path: str) -> str | None:
+    # Uses filename to guess content type.
     guessed, _ = mimetypes.guess_type(path)
-    return guessed or "application/octet-stream"
+    return guessed 
+
+
+def _suffix(path: str) -> str:
+    # Preserve compound suffixes like ".nii.gz".
+    return "".join(Path(path).suffixes)
 
 
 def _run_algorithm(
     *,
-    input_paths: List[str],
-    named_inputs: Dict[str, str],
+    inputs: Dict[str, str],
     output_dir: Path,
-) -> Path:
+) -> Dict[str, Path]:
     """Implement your algorithm here.
 
-    Keep it simple:
-    - read `primary_input` (or iterate over `all_input_paths` / `named_inputs`)
-    - write one output file under `output_dir`
-    - return the *absolute* output path
-
-    Example (CBCT-ish): if the input is NIfTI and nibabel is installed, reorient
-    it to canonical (RAS+) orientation. This is a safe, real-world example of a
-    "rotation"/axis-permutation operation that updates the affine correctly.
-    If nibabel is not installed (or input is not NIfTI), it falls back to a
-    straightforward file copy.
+    This default implementation is intentionally minimal and multi-output:
+    it copies each input file to `/work/output/` under the same logical name.
     """
 
-    out_path = output_dir / "{{ cookiecutter.output_filename }}"
+    produced: Dict[str, Path] = {}
+    for logical_name, in_path in inputs.items():
+        out_path = output_dir / f"{logical_name}{_suffix(in_path)}"
+        shutil.copy2(in_path, out_path)
+        produced[str(logical_name)] = out_path
 
-    if _is_nifti(input_paths[0]):
-        try:
-            import nibabel as nib  # type: ignore
-        except Exception:
-            nib = None
-
-        if nib is not None:
-            img = nib.load(input_paths[0])
-            rotated = nib.as_closest_canonical(img)
-            nib.save(rotated, str(out_path))
-            return out_path
-
-    shutil.copy2(input_paths[0], out_path)
-    return out_path
+    return produced
 
 
 def main() -> int:
@@ -165,35 +96,22 @@ def main() -> int:
     output_manifest_path = _require_env("TF_OUTPUT_MANIFEST")
 
     manifest_raw = _read_json(input_manifest_path)
-    if not isinstance(manifest_raw, dict):
-        raise SystemExit("Input manifest must be a JSON object")
-
-    input_paths = _input_paths_from_manifest(manifest_raw)
-    if not input_paths:
-        raise SystemExit("No inputs provided in manifest")
-
-    named_inputs = _named_inputs_from_manifest(manifest_raw)
+    inputs = manifest_raw["inputs"]
 
     out_manifest_file = Path(output_manifest_path)
     output_dir = out_manifest_file.parent
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    produced = _run_algorithm(
-        input_paths=input_paths,
-        named_inputs=named_inputs,
-        output_dir=output_dir,
-    )
+    produced = _run_algorithm(inputs=inputs, output_dir=output_dir)
 
-    content_type_cfg = "{{ cookiecutter.output_content_type }}".strip()
-    content_type = content_type_cfg if content_type_cfg else _guess_content_type(produced.name)
+    outputs: Dict[str, Any] = {}
+    for logical_name, out_path in produced.items():
+        out_spec: Dict[str, Any] = {"path": out_path.name}
+        content_type = _guess_content_type(out_path.name)
+        if content_type:
+            out_spec["content_type"] = content_type
+        outputs[str(logical_name)] = out_spec
 
-    output_spec: Dict[str, Any] = {"path": produced.name}
-    # `content_type` is optional: the external runner uploads without setting ContentType
-    # if this field is missing/empty.
-    if content_type:
-        output_spec["content_type"] = content_type
-
-    outputs = {"{{ cookiecutter.output_key }}": output_spec}
     _write_output_manifest(output_manifest_path, outputs)
     return 0
 
