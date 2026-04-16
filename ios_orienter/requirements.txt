@@ -1,0 +1,9 @@
+# Add Python dependencies for the algorithm here.
+# Example:
+# numpy==2.3.2
+celery[redis]==5.6.0
+boto3==1.39.9
+requests==2.32.3
+numpy>=1.24.0
+torch>=2.2.0
+trimesh>=4.0.0
