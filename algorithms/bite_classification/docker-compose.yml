@@ -1,0 +1,25 @@
+services:
+  runner:
+    build:
+      context: ..
+      dockerfile: bite_classification/Dockerfile
+      args:
+        TORCH_CUDA_ARCH_LIST: ${TORCH_CUDA_ARCH_LIST:-7.5}
+    image: ${RUNNER_IMAGE:-toothfairy4m-bite_classification:latest}
+    container_name: ${RUNNER_CONTAINER_NAME:-toothfairy4m-bite_classification-runner}
+    env_file:
+      - .env
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: python -m celery -A runner.celery_app worker -l info -Q ${RUNNER_QUEUE:-runner_bite_dev} --concurrency=${RUNNER_CONCURRENCY:-1} --prefetch-multiplier=${RUNNER_PREFETCH_MULTIPLIER:-1} -O fair
+    restart: unless-stopped
+    networks:
+      - proxy-net 
+      - app-net
+
+networks:
+  proxy-net:
+    external: true
+  app-net:
+    name: app-net-dev-lborghi
+    external: true

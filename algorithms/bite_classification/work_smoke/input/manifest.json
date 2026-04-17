@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "inputs": {
+    "upper": "/work/input/upper.stl",
+    "lower": "/work/input/lower.stl"
+  }
+}

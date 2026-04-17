@@ -1,0 +1,13 @@
+.git
+.gitignore
+.python-version
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Not required for bite runner image build
+cookiecutter-toothfairy4m-runner/
+docs/
+uv.lock

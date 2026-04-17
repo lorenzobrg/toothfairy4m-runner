@@ -1,0 +1,59 @@
+{
+  "sagittal_right": "II_full",
+  "sagittal_left": "III",
+  "vertical": "reverse",
+  "transverse": "cross",
+  "midline": "deviated",
+  "raw": {
+    "label_0_right": {
+      "pred": 1,
+      "probabilities": [
+        1.7260647666716977e-07,
+        0.9945188164710999,
+        0.005481077823787928
+      ]
+    },
+    "label_1_left": {
+      "pred": 2,
+      "probabilities": [
+        2.3960600170624957e-10,
+        1.1925135545709509e-08,
+        1.0
+      ]
+    },
+    "label_2_vertical": {
+      "pred": 3,
+      "probabilities": [
+        2.9240172807476483e-05,
+        0.001084540388546884,
+        0.06415044516324997,
+        0.9347358345985413
+      ]
+    },
+    "label_3_transverse": {
+      "pred": 2,
+      "probabilities": [
+        0.010614787228405476,
+        0.0007945109391584992,
+        0.988590657711029
+      ]
+    },
+    "label_4_midline": {
+      "pred": 1,
+      "probabilities": [
+        5.587848590948852e-06,
+        0.9999943971633911
+      ]
+    }
+  },
+  "meta": {
+    "input_files": [
+      "/work/input/upper.stl",
+      "/work/input/lower.stl"
+    ],
+    "device": "cuda",
+    "checkpoint": "/app/models/model_best.pth",
+    "target_points": 16384,
+    "grid_size": 0.01
+  }
+}

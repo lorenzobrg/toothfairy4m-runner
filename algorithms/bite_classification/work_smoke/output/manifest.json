@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "outputs": {
+    "bite_classification_results": {
+      "path": "ios_bite_classification_results.json",
+      "content_type": "application/json"
+    }
+  }
+}
