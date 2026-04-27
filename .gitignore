@@ -1,3 +1,8 @@
 venv
 cbct_scaler
 ios_invert
+.env
+.venv
+*.st
+*.ckpt
+*.log
