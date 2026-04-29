@@ -106,18 +106,25 @@ def _localize_inputs(
     return localized, source_keys
 
 
-def _run_docker(*, image: str, workdir: str, env: Dict[str, str]) -> str:
+def _run_docker(
+    *,
+    image: str,
+    workdir: str,
+    env: Dict[str, str],
+    container_cmd: str,
+    container_gpus: str,
+) -> str:
     local_work_dir = os.path.join(workdir, "work")
     os.makedirs(local_work_dir, exist_ok=True)
 
     create_cmd = ["docker", "create"]
+    if container_gpus:
+        create_cmd.extend(["--gpus", container_gpus])
     for k, v in env.items():
         create_cmd.extend(["-e", f"{k}={v}"])
     create_cmd.append(image)
 
-    cmd_raw = (
-        os.getenv("ALGORITHM_CONTAINER_CMD") or "python /app/entrypoint.py"
-    ).strip()
+    cmd_raw = (container_cmd or "").strip()
     if cmd_raw:
         try:
             create_cmd.extend(shlex.split(cmd_raw))
@@ -225,7 +232,13 @@ def run_job(
             "TF_INPUT_MANIFEST": "/work/input/manifest.json",
             "TF_OUTPUT_MANIFEST": "/work/output/manifest.json",
         }
-        logs = _run_docker(image=image, workdir=workdir, env=env)
+        logs = _run_docker(
+            image=image,
+            workdir=workdir,
+            env=env,
+            container_cmd=cfg.algorithm_container_cmd,
+            container_gpus=cfg.algorithm_container_gpus,
+        )
 
         if not os.path.exists(output_manifest_path):
             raise RunnerError("Algorithm did not write output manifest")

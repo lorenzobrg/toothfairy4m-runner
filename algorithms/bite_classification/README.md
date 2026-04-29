@@ -73,6 +73,7 @@ Copy `.env.compose.example` to `.env` and set values:
 - `OBJECT_STORAGE_*`: S3-compatible endpoint and credentials used by runner for artifact I/O (Garage/MinIO)
 - `ALGORITHM_IMAGE_MAP`: JSON map modality -> docker image (use `bite_classification` key)
 - `ALGORITHM_CONTAINER_CMD` (optional): command executed inside algorithm container (default: `python /app/entrypoint.py`)
+- `ALGORITHM_CONTAINER_GPUS` (optional): value passed to `docker create --gpus` for spawned algorithm containers (default `all`; set empty to disable)
 - `RUNNER_WORKDIR_ROOT`: local staging path for downloaded inputs/output manifests
 - `TORCH_CUDA_ARCH_LIST`: build arch list for CUDA kernels (default `7.5` for RTX 2080 Ti)
 
@@ -83,7 +84,7 @@ Build from the `toothfairy4m-runner` root so Docker can include `Bits2Bites/` co
 ```bash
 cd /home/lborghi/toothfairy4m-runner
 docker build \
-  -f bite_classification/Dockerfile \
+  -f algorithms/bite_classification/Dockerfile \
   --build-arg TORCH_CUDA_ARCH_LIST="7.5" \
   -t toothfairy4m-bite_classification:latest \
   .
@@ -114,7 +115,7 @@ This starts a Celery worker with:
 ## Run with Docker Compose
 
 ```bash
-cd /home/lborghi/toothfairy4m-runner/bite_classification
+cd /home/lborghi/toothfairy4m-runner/algorithms/bite_classification
 cp .env.compose.example .env
 docker compose up --build -d
 ```

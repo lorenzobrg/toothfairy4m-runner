@@ -22,7 +22,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     docker.io \
     && rm -rf /var/lib/apt/lists/*
 
-COPY bite_classification/requirements.txt /app/requirements.txt
+COPY algorithms/bite_classification/requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r /app/requirements.txt
 
@@ -37,11 +37,11 @@ RUN pip install --no-cache-dir \
 RUN pip install --no-cache-dir spconv-cu124
 
 COPY Bits2Bites /opt/Bits2Bites
-COPY bite_classification/scripts/build_pointcept_kernels.sh /app/scripts/build_pointcept_kernels.sh
+COPY algorithms/bite_classification/scripts/build_pointcept_kernels.sh /app/scripts/build_pointcept_kernels.sh
 
 RUN chmod +x /app/scripts/build_pointcept_kernels.sh && /app/scripts/build_pointcept_kernels.sh
 
-COPY bite_classification /app
+COPY algorithms/bite_classification /app
 
 RUN mkdir -p /app/models && cp /app/model_best.pth /app/models/model_best.pth
 

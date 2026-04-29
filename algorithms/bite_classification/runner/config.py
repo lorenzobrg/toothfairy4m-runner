@@ -50,6 +50,8 @@ class RunnerConfig:
     object_storage_addressing_style: str
     object_storage_key_prefix: str
     algorithm_image_map: Dict[str, str]
+    algorithm_container_cmd: str
+    algorithm_container_gpus: str
     runner_workdir_root: str
 
 
@@ -84,6 +86,11 @@ def load_config() -> RunnerConfig:
     )
     default_map = {"bite_classification": "toothfairy4m-bite_classification:latest"}
     algorithm_image_map = _json_dict_env("ALGORITHM_IMAGE_MAP", default=default_map)
+    algorithm_container_cmd = (
+        os.getenv("ALGORITHM_CONTAINER_CMD", "python /app/entrypoint.py").strip()
+        or "python /app/entrypoint.py"
+    )
+    algorithm_container_gpus = os.getenv("ALGORITHM_CONTAINER_GPUS", "all").strip()
     runner_workdir_root = os.getenv(
         "RUNNER_WORKDIR_ROOT", "/tmp/toothfairy4m-runner"
     ).strip()
@@ -125,5 +132,7 @@ def load_config() -> RunnerConfig:
         object_storage_addressing_style=object_storage_addressing_style,
         object_storage_key_prefix=object_storage_key_prefix,
         algorithm_image_map=algorithm_image_map,
+        algorithm_container_cmd=algorithm_container_cmd,
+        algorithm_container_gpus=algorithm_container_gpus,
         runner_workdir_root=runner_workdir_root,
     )
