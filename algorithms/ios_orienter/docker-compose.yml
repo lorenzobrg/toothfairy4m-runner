@@ -10,13 +10,3 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     command: python -m celery -A runner.celery_app worker -l info -Q ${RUNNER_QUEUE:-runner_ios_dev} --concurrency=${RUNNER_CONCURRENCY:-1} --prefetch-multiplier=${RUNNER_PREFETCH_MULTIPLIER:-1} -O fair
     restart: unless-stopped
-    networks:
-      - proxy-net 
-      - app-net
-
-networks:
-  proxy-net:
-    external: true
-  app-net:
-    name: app-net-dev-lborghi
-    external: true
